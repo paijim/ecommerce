@@ -5,7 +5,7 @@ on:
     branches: [ "main" ]
 
 jobs:
-  test-build:
+  build-and-push:
     runs-on: ubuntu-latest
 
     steps:
@@ -23,14 +23,22 @@ jobs:
           npm install
           npm run build
 
-      - name: Vérifier le build Docker Backend
-        run: |
-          docker build -t test-backend ./backend
+      - name: Connexion à Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Vérifier le build Docker Frontend
-        run: |
-          docker build -t test-frontend ./frontend
+      - name: Build et Push Backend
+        uses: docker/build-push-action@v5
+        with: 
+          context: ./backend
+          push: true
+          tags: herimk/Ecommerce-backend:latest
 
-      - name: Test de l'infrastructure Docker Compose
-        run: |
-          docker compose config
+      - name: Build et Push Frontend
+        uses: docker/build-push-action@v5
+        with: 
+          context: ./frontend
+          push: true
+          tags: herimk/Ecommerce-frontend:latest
