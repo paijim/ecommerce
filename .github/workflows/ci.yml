@@ -1,26 +1,36 @@
 name: CI-Ecommerce
 
-# Déclencheur : s'active à chaque push sur la branche main
 on:
   push:
     branches: [ "main" ]
 
 jobs:
   test-build:
-    runs-on: ubuntu-latest # Le système qui va tester ton code
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout du code
         uses: actions/checkout@v4
 
-      - name: Vérifier le build du Backend
+      - name: Installer Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Build du Frontend (Générer le dossier dist)
+        run: |
+          cd frontend
+          npm install
+          npm run build
+
+      - name: Vérifier le build Docker Backend
         run: |
           docker build -t test-backend ./backend
 
-      - name: Vérifier le build du Frontend
+      - name: Vérifier le build Docker Frontend
         run: |
           docker build -t test-frontend ./frontend
 
       - name: Test de l'infrastructure Docker Compose
         run: |
-          docker compose config # Vérifie que le docker-compose.yml n'a pas d'erreur de syntaxe
+          docker compose config
