@@ -1,0 +1,7 @@
+global:
+  scrape_interval: 15s # Fréquence de récupération des données
+
+scrape_configs:
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080'] # Nom du service défini dans ton docker-compose
