@@ -26,3 +26,6 @@ thumbs.db
 
 # Kubernetes secrets
 k8s/secrets.yaml
+
+# minikube
+minikube-linux-amd64
