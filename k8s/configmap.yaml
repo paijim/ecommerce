@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ecommerce-config
+data:
+  db-name: "techstore_db"
+  db-host: "db" # C'est le nom du service Kubernetes de ta DB

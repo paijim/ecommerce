@@ -23,3 +23,6 @@ thumbs.db
 # IDE
 .vscode/
 .idea/
+
+# Kubernetes secrets
+k8s/secrets.yaml

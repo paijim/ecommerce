@@ -1,0 +1,143 @@
+# --- BASE DE DONNÉES ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ecommerce-db
+spec:
+  replicas: 1 # On garde 1 seule DB pour éviter les conflits de données
+  selector:
+    matchLabels:
+      app: db
+  template:
+    metadata:
+      labels:
+        app: db
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:15
+        env:
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: db-credentials
+              key: db-user
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: db-credentials
+              key: db-password
+        - name: POSTGRES_DB
+          valueFrom:
+            configMapKeyRef:
+              name: ecommerce-config
+              key: db-name
+        ports:
+        - containerPort: 5432
+        # --- NOUVEAU : On branche le disque dans le conteneur ---
+        volumeMounts:
+        - name: postgres-storage
+          mountPath: /var/lib/postgresql/data
+      # --- NOUVEAU : On définit quel PVC utiliser pour ce Pod ---
+      volumes:
+      - name: postgres-storage
+        persistentVolumeClaim:
+          claimName: ecommerce-db-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: db
+spec:
+  selector:
+    app: db
+  ports:
+    - port: 5432
+---
+# --- BACKEND ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ecommerce-backend
+spec:
+  replicas: 2 # <--- ICI : 2 copies de ton backend Node.js
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+      - name: backend
+        image: herimk/ecommerce-backend:latest
+        env:
+        # 1. On récupère l'utilisateur depuis le Secret
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: db-credentials
+              key: db-user
+        # 2. On récupère le mot de passe depuis le Secret
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: db-credentials
+              key: db-password
+        # 3. On récupère le nom de la DB depuis la ConfigMap
+        - name: DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: ecommerce-config
+              key: db-name
+        # 4. On construit l'URL finale en utilisant les variables ci-dessus !
+        - name: DATABASE_URL
+          value: postgres://$(DB_USER):$(DB_PASSWORD)@db:5432/$(DB_NAME)
+        ports:
+        - containerPort: 5000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ecommerce-backend
+spec:
+  selector:
+    app: backend
+  ports:
+    - port: 5000
+      targetPort: 5000
+---
+# --- FRONTEND ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ecommerce-frontend
+spec:
+  replicas: 3 # <--- ICI : 3 copies de ton site React
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+      - name: frontend
+        image: herimk/ecommerce-frontend:latest
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-service
+spec:
+  type: NodePort
+  selector:
+    app: frontend
+  ports:
+    - port: 80
+      targetPort: 80
+      nodePort: 30001
